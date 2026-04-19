@@ -1,0 +1,89 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  backend-ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./kiyi-media-backend
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: ./kiyi-media-backend/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Tests
+        run: npm test
+
+  frontend-ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./kiyi-media-frontend
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: ./kiyi-media-frontend/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Tests
+        run: npm test -- --watchAll=false --passWithNoTests
+
+      - name: Build Project
+        run: npm run build
+
+  deploy:
+    needs: [backend-ci, frontend-ci]
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          script: |
+            # Navigate to project directory
+            cd ~/kiyimedyaweb.1 || exit
+            
+            # Pull latest changes
+            git pull origin master
+            
+            # Backend Deployment
+            cd kiyi-media-backend
+            npm install --production
+            # Restart backend process (assuming it's named 'kiyi-backend')
+            pm2 restart kiyi-backend || pm2 start server.js --name kiyi-backend
+            
+            # Frontend Deployment (if served via separate process or static)
+            cd ../kiyi-media-frontend
+            npm install --production
+            npm run build
+            # If using serve or another server for static files
+            # pm2 restart kiyi-frontend || pm2 serve build 3000 --name kiyi-frontend
+            
+            # Save PM2 list
+            pm2 save

@@ -1,0 +1,98 @@
+/* src/App.css */
+
+/* 1. SEÇİM RENGİ */
+::selection {
+  background: rgba(59, 130, 246, 0.15);
+  color: #0F172A;
+}
+
+/* 2. TİPOGRAFİ YARDIMCILARI */
+.text-gradient-primary {
+  background: linear-gradient(135deg, #1D3557 0%, #3B82F6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-accent {
+  background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 3. KART STİLLERİ */
+.glass-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.glass-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+/* 4. ANİMASYONLAR */
+@keyframes floating {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: floating 6s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.3); }
+  70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
+}
+
+.shine-effect {
+  background: linear-gradient(
+    to right,
+    #3B82F6 20%,
+    #60A5FA 40%,
+    #3B82F6 60%
+  );
+  background-size: 200% auto;
+  color: #fff;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shine 3s linear infinite;
+}
+
+/* 5. RESİM AYARLARI */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 6. RESPONSIVE YARDIMCILAR */
+@media (max-width: 600px) {
+  .mobile-hide {
+    display: none !important;
+  }
+}
+
+/* 7. SECTION ALT ARKA PLAN */
+.section-alt {
+  background-color: #F1F5F9;
+}

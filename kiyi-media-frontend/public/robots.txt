@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# Sitemap adresini buraya ekliyoruz
+# Canlıya aldığında buradaki localhost yerine gerçek domainini yazmalısın.
+Sitemap: https://kiyimedya.com/sitemap.xml
