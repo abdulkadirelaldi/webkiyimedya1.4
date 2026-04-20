@@ -42,29 +42,12 @@ import Settings from './pages/Settings';
 // ============================================================
 const theme = createTheme({
   palette: {
-    mode: 'light',
-    primary: {
-      main: '#3B82F6',
-      light: '#60A5FA',
-      dark: '#1D4ED8',
-    },
-    secondary: {
-      main: '#1D3557',
-      light: '#457B9D',
-      dark: '#0F172A',
-    },
-    background: {
-      default: '#F8FAFC',
-      paper: '#FFFFFF',
-    },
-    text: {
-      primary: '#0F172A',
-      secondary: '#64748B',
-    },
-    divider: 'rgba(0,0,0,0.08)',
-    action: {
-      hover: 'rgba(59, 130, 246, 0.06)',
-    }
+    mode: 'dark',
+    primary: { main: '#3B82F6', light: '#60A5FA', dark: '#1D4ED8' },
+    secondary: { main: '#8B5CF6' },
+    background: { default: '#060C1A', paper: '#0D1628' },
+    text: { primary: '#FFFFFF', secondary: 'rgba(255,255,255,0.6)' },
+    divider: 'rgba(255,255,255,0.08)',
   },
   typography: {
     fontFamily: "'Outfit', 'Inter', sans-serif",
@@ -73,37 +56,21 @@ const theme = createTheme({
     h3: { fontWeight: 700 },
     button: { textTransform: 'none', fontWeight: 600 },
   },
-  shape: {
-    borderRadius: 16,
-  },
+  shape: { borderRadius: 16 },
   components: {
     MuiButton: {
       styleOverrides: {
-        root: {
-          borderRadius: '50px',
-          boxShadow: 'none',
-          '&:hover': {
-            boxShadow: '0 4px 16px rgba(59, 130, 246, 0.25)',
-          },
-        },
+        root: { borderRadius: '50px', boxShadow: 'none' },
       },
     },
     MuiPaper: {
       styleOverrides: {
-        root: {
-          backgroundImage: 'none',
-          boxShadow: '0 1px 20px rgba(0,0,0,0.06)',
-        },
+        root: { backgroundImage: 'none' },
       },
     },
     MuiAppBar: {
       styleOverrides: {
-        root: {
-          background: 'rgba(255, 255, 255, 0.85)',
-          backdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(0,0,0,0.06)',
-          boxShadow: '0 1px 20px rgba(0,0,0,0.06)',
-        },
+        root: { background: '#060C1A', boxShadow: 'none' },
       },
     },
   },

@@ -1,20 +1,31 @@
 // src/pages/AdminLogin.jsx
-import React, { useState, useEffect } from 'react';
-import {
-    Container, Paper, Typography, TextField, Button, Box,
-    InputAdornment, IconButton, Alert, CircularProgress, Fade, Grow,
-    useTheme
-} from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Typography, TextField, Button, InputAdornment, IconButton, Alert, CircularProgress, Fade } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import EmailIcon from '@mui/icons-material/Email';
-import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import LockIcon from '@mui/icons-material/Lock';
+import ShieldIcon from '@mui/icons-material/Shield';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+
+const inputStyle = {
+    '& .MuiOutlinedInput-root': {
+        color: '#fff',
+        bgcolor: 'rgba(255,255,255,0.05)',
+        borderRadius: 2,
+        '& fieldset': { borderColor: 'rgba(255,255,255,0.12)', transition: '0.3s' },
+        '&:hover fieldset': { borderColor: 'rgba(59,130,246,0.5)' },
+        '&.Mui-focused fieldset': { borderColor: '#3B82F6', borderWidth: '2px' },
+    },
+    '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.4)' },
+    '& .MuiInputLabel-root.Mui-focused': { color: '#60A5FA' },
+    '& input': { color: '#fff' },
+};
 
 const AdminLogin = () => {
     const navigate = useNavigate();
-    const theme = useTheme();
     const { login } = useAuth();
 
     const [email, setEmail] = useState('');
@@ -23,331 +34,143 @@ const AdminLogin = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    // --- MASKOT ANIMASYON STATE'LERİ ---
-    // 0: Normal (Idle)
-    // 1: E-posta odaklı (Gözler yazı yazıyor gibi)
-    // 2: Şifre odaklı (Gözler kapalı/ellerle kapalı)
-    // 3: Şifre Göster (Eller aşağıda, gözler açık/şaşkın)
-    const [mascotState, setMascotState] = useState(0);
-    const [eyePosition, setEyePosition] = useState(0); // E-posta uzunluğuna göre göz hareketi
-
-    useEffect(() => {
-        // E-posta yazarken göz bebekleri hareket etsin, ama çok gitmesin
-        const limit = 15;
-        const pos = Math.min(email.length, limit) - (limit / 2);
-        setEyePosition(pos);
-    }, [email]);
-
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
         setLoading(true);
-
         try {
             await login(email, password);
             navigate('/admin/dashboard');
         } catch (err) {
-            const errorMsg = err.response?.data?.error || 'Giriş başarısız! E-posta veya şifre hatalı.';
-            setError(errorMsg);
+            setError(err.response?.data?.error || 'E-posta veya şifre hatalı.');
             setLoading(false);
         }
     };
 
-    // --- STİL & RENKLER ---
-    const colors = {
-        primary: '#3B82F6',
-        cardBg: '#FFFFFF',
-        glassBorder: 'rgba(0, 0, 0, 0.08)',
-        textMain: '#0F172A',
-        textSec: '#64748B',
-        yetiSkin: '#e2e8f0',
-        yetiDark: '#cbd5e1',
-        bgDark: '#F8FAFC'
-    };
-
-    // --- SVG MASKOT BİLEŞENİ (YETİ) ---
-    const YetiMascot = () => (
-        <svg width="200" height="180" viewBox="0 0 200 180" style={{ overflow: 'visible', marginBottom: '-10px' }}>
-            <defs>
-                <clipPath id="face-clip"><rect x="0" y="0" width="200" height="180" /></clipPath>
-            </defs>
-
-            <g transform="translate(0, 10)">
-                {/* VÜCUT/KAFA (Yeti Shape) */}
-                <path
-                    d="M40 180 L160 180 L160 140 C160 50 140 10 100 10 C60 10 40 50 40 140 Z"
-                    fill={colors.yetiSkin}
-                />
-
-                {/* KULAKLAR */}
-                <path d="M30 60 C10 40 10 90 40 80" fill={colors.yetiSkin} />
-                <path d="M170 60 C190 40 190 90 160 80" fill={colors.yetiSkin} />
-
-                {/* YÜZ BÖLGESİ (açık renk) */}
-                <ellipse cx="100" cy="95" rx="45" ry="35" fill="white" opacity="0.8" />
-
-                {/* AĞIZ */}
-                <g transform={mascotState === 3 ? "translate(0, 5)" : "translate(0,0)"}>
-                    <path
-                        d={mascotState === 3 ? "M90 115 Q100 125 110 115" : "M92 115 Q100 120 108 115"}
-                        stroke="#334155" strokeWidth="3" fill="none" strokeLinecap="round"
-                    />
-                </g>
-
-                {/* BURUN */}
-                <ellipse cx="100" cy="105" rx="6" ry="4" fill="#334155" />
-
-                {/* GÖZLER GRUBU */}
-                <g
-                    style={{
-                        transition: 'all 0.2s ease',
-                        opacity: mascotState === 2 && !showPassword ? 0 : 1 // Şifre modunda eller kapatacağı için gizle
-                    }}
-                >
-                    {/* Sol Göz */}
-                    <circle cx="82" cy="85" r="10" fill="white" stroke="#334155" strokeWidth="2" />
-                    {/* Sağ Göz */}
-                    <circle cx="118" cy="85" r="10" fill="white" stroke="#334155" strokeWidth="2" />
-
-                    {/* Göz Bebekleri (Hareketli) */}
-                    <g transform={`translate(${mascotState === 1 ? eyePosition : 0}, ${mascotState === 1 ? 2 : 0})`}>
-                        <circle cx="82" cy="85" r="4" fill="#334155" />
-                        <circle cx="118" cy="85" r="4" fill="#334155" />
-                    </g>
-
-                    {/* Şaşkınlık Efekti (Gözler Büyür) */}
-                    {mascotState === 3 && (
-                        <g>
-                            <circle cx="82" cy="85" r="12" fill="none" stroke="#3b82f6" strokeWidth="2" opacity="0.5" />
-                            <circle cx="118" cy="85" r="12" fill="none" stroke="#3b82f6" strokeWidth="2" opacity="0.5" />
-                        </g>
-                    )}
-                </g>
-
-                {/* ELLER (Password Gizleme İçin) */}
-                {/* Sol El */}
-                <path
-                    d="M40 180 C30 140 60 80 82 80 C95 80 100 95 85 110 C70 125 50 160 40 180"
-                    fill={colors.yetiSkin} stroke="#cbd5e1" strokeWidth="2"
-                    style={{
-                        transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                        transformOrigin: '40px 180px',
-                        transform: (mascotState === 2 || mascotState === 3) && !showPassword
-                            ? 'translate(10px, -5px) rotate(-10deg)' // Kapatıyor
-                            : 'translate(-40px, 150px) rotate(-45deg)', // Aşağıda
-                        opacity: mascotState === 2 && !showPassword ? 1 : 0
-                    }}
-                />
-
-                {/* Sağ El */}
-                <path
-                    d="M160 180 C170 140 140 80 118 80 C105 80 100 95 115 110 C130 125 150 160 160 180"
-                    fill={colors.yetiSkin} stroke="#cbd5e1" strokeWidth="2"
-                    style={{
-                        transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                        transformOrigin: '160px 180px',
-                        transform: (mascotState === 2 || mascotState === 3) && !showPassword
-                            ? 'translate(-10px, -5px) rotate(10deg)' // Kapatıyor
-                            : 'translate(40px, 150px) rotate(45deg)', // Aşağıda
-                        opacity: mascotState === 2 && !showPassword ? 1 : 0
-                    }}
-                />
-            </g>
-        </svg>
-    );
-
     return (
-        <Box
-            sx={{
-                minHeight: '100vh',
-                display: 'flex',
-                alignItems: 'center',
+        <Box sx={{
+            minHeight: '100vh',
+            display: 'flex',
+            bgcolor: '#060C1A',
+            position: 'relative',
+            overflow: 'hidden',
+        }}>
+            {/* Arka plan glow'ları */}
+            <Box sx={{ position: 'absolute', top: '-20%', left: '-10%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%)', filter: 'blur(80px)', pointerEvents: 'none' }} />
+            <Box sx={{ position: 'absolute', bottom: '-20%', right: '-10%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%)', filter: 'blur(80px)', pointerEvents: 'none' }} />
+
+            {/* SOL PANEL — sadece desktop */}
+            <Box sx={{
+                display: { xs: 'none', md: 'flex' },
+                flex: 1,
+                flexDirection: 'column',
                 justifyContent: 'center',
+                px: 8,
+                pt: 8,
+                borderRight: '1px solid rgba(255,255,255,0.06)',
                 position: 'relative',
-                overflow: 'hidden',
-                fontFamily: "'Inter', sans-serif"
-            }}
-        >
-            {/* GLOBAL BACKGROUND */}
-            <div className="aurora-bg" />
+                zIndex: 1,
+            }}>
+                <Typography variant="h3" fontWeight={900} color="white" sx={{ mb: 2, lineHeight: 1.15, fontSize: '2.8rem' }}>
+                    Yönetim<br />
+                    <span style={{ background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Paneline Hoş Geldiniz</span>
+                </Typography>
+                <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.45)', lineHeight: 1.9, maxWidth: 380, mb: 6 }}>
+                    Kıyı Medya içerik, portföy ve müşteri yönetim sistemi. Yetkili personel girişi.
+                </Typography>
 
-            <Container maxWidth="xs" sx={{ position: 'relative', zIndex: 2 }}>
-
-                {/* MASKOT ALANI */}
-                <Box sx={{
-                    height: 150,
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'flex-end',
-                    mb: -3,
-                    position: 'relative',
-                    zIndex: 1
-                }}>
-                    <YetiMascot />
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {['Portföy ve içerik yönetimi', 'Müşteri ve proje takibi', 'Analitik ve raporlama'].map((text, i) => (
+                        <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <CheckCircleIcon sx={{ color: '#3B82F6', fontSize: 18 }} />
+                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.55)', fontWeight: 500 }}>{text}</Typography>
+                        </Box>
+                    ))}
                 </Box>
 
-                {/* LOGIN KARTI */}
-                <Grow in={true} timeout={600}>
-                    <Paper
-                        className="glass-panel"
-                        elevation={0}
-                        sx={{
-                            p: { xs: 3, sm: 5 },
-                            borderRadius: 5,
-                            bgcolor: colors.cardBg,
-                            border: `1px solid ${colors.glassBorder}`,
-                            boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
-                            position: 'relative',
-                            overflow: 'hidden'
-                        }}
-                    >
-                        {/* Dekoratif Işık */}
-                        <Box sx={{
-                            position: 'absolute', top: '-50%', left: '-50%', width: '200%', height: '200%',
-                            background: 'radial-gradient(circle, rgba(59,130,246,0.1) 0%, rgba(0,0,0,0) 70%)',
-                            animation: 'pulse 5s infinite',
-                            pointerEvents: 'none'
-                        }} />
+                <Box sx={{ mt: 'auto', pt: 6 }}>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)', letterSpacing: 0.5 }}>
+                        © {new Date().getFullYear()} Kıyı Medya · Tüm hakları saklıdır
+                    </Typography>
+                </Box>
+            </Box>
 
-                        <Box sx={{ textAlign: 'center', mb: 4, position: 'relative', zIndex: 2 }}>
-                            <Typography variant="h4" fontWeight="800" sx={{ color: '#0F172A', letterSpacing: '-0.5px' }}>
-                                Admin Girişi
-                            </Typography>
-                            <Typography variant="body2" sx={{ color: colors.textSec, mt: 1 }}>
-                                Hoşgeldin, seni görmek güzel!
-                            </Typography>
-                        </Box>
+            {/* SAĞ PANEL — form */}
+            <Box sx={{
+                width: { xs: '100%', md: '480px' },
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                px: { xs: 3, sm: 6 },
+                pt: { xs: 6, md: 10 },
+                pb: 6,
+                position: 'relative',
+                zIndex: 1,
+            }}>
+                <Box sx={{ mb: 6 }}>
+                    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 2, py: 0.7, mb: 3, borderRadius: '50px', bgcolor: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                        <ShieldIcon sx={{ fontSize: 14, color: '#60A5FA' }} />
+                        <Typography variant="caption" sx={{ color: '#60A5FA', fontWeight: 700, letterSpacing: 1.5 }}>GÜVENLİ GİRİŞ</Typography>
+                    </Box>
+                    <Typography variant="h4" fontWeight={900} color="white" sx={{ mb: 1, letterSpacing: '-0.02em' }}>Giriş Yapın</Typography>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>Yetkili hesabınızla devam edin</Typography>
+                </Box>
 
-                        {error && (
-                            <Fade in={true}>
-                                <Alert
-                                    severity="error"
-                                    variant="filled"
-                                    sx={{ mb: 3, borderRadius: 3, bgcolor: 'rgba(239, 68, 68, 0.9)', color: 'white' }}
-                                >
-                                    {error}
-                                </Alert>
-                            </Fade>
-                        )}
+                {error && (
+                    <Fade in>
+                        <Alert severity="error" sx={{ mb: 3, borderRadius: 2, bgcolor: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#FCA5A5', '& .MuiAlert-icon': { color: '#F87171' } }}>
+                            {error}
+                        </Alert>
+                    </Fade>
+                )}
 
-                        <form onSubmit={handleLogin} style={{ position: 'relative', zIndex: 2 }}>
+                <form onSubmit={handleLogin}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                        <TextField
+                            fullWidth label="E-Posta Adresi" variant="outlined"
+                            value={email} onChange={(e) => setEmail(e.target.value)}
+                            required type="email" sx={inputStyle}
+                            InputProps={{ startAdornment: <InputAdornment position="start"><EmailIcon sx={{ color: 'rgba(255,255,255,0.3)', fontSize: 20 }} /></InputAdornment> }}
+                        />
+                        <TextField
+                            fullWidth label="Şifre" variant="outlined"
+                            type={showPassword ? 'text' : 'password'}
+                            value={password} onChange={(e) => setPassword(e.target.value)}
+                            required sx={inputStyle}
+                            InputProps={{
+                                startAdornment: <InputAdornment position="start"><LockIcon sx={{ color: 'rgba(255,255,255,0.3)', fontSize: 20 }} /></InputAdornment>,
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: '#60A5FA' } }}>
+                                            {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                                        </IconButton>
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
 
-                            {/* EMAIL INPUT */}
-                            <TextField
-                                fullWidth
-                                label="E-Posta Adresi"
-                                variant="outlined"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                onFocus={() => setMascotState(1)}
-                                onBlur={() => setMascotState(0)}
-                                sx={{
-                                    mb: 3,
-                                    '& .MuiOutlinedInput-root': {
-                                        color: '#0F172A',
-                                        bgcolor: '#F8FAFC',
-                                        borderRadius: 3,
-                                        '& fieldset': { borderColor: 'rgba(0,0,0,0.12)', transition: '0.3s' },
-                                        '&:hover fieldset': { borderColor: colors.primary },
-                                        '&.Mui-focused fieldset': { borderColor: colors.primary, borderWidth: 2 }
-                                    },
-                                    '& .MuiInputLabel-root': { color: colors.textSec },
-                                    '& .MuiInputLabel-root.Mui-focused': { color: colors.primary }
-                                }}
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <EmailIcon sx={{ color: mascotState === 1 ? colors.primary : colors.textSec }} />
-                                        </InputAdornment>
-                                    ),
-                                }}
-                            />
+                        <Button
+                            type="submit" fullWidth variant="contained" size="large"
+                            disabled={loading}
+                            sx={{
+                                mt: 1,
+                                background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)',
+                                color: 'white', py: 1.8, borderRadius: 2,
+                                fontWeight: 700, fontSize: '1rem', textTransform: 'none',
+                                boxShadow: '0 8px 30px rgba(59,130,246,0.35)',
+                                '&:hover': { opacity: 0.92, transform: 'translateY(-2px)', boxShadow: '0 12px 40px rgba(59,130,246,0.5)' },
+                                transition: 'all 0.3s',
+                            }}
+                        >
+                            {loading ? <CircularProgress size={22} color="inherit" /> : 'Giriş Yap'}
+                        </Button>
+                    </Box>
+                </form>
 
-                            {/* PASSWORD INPUT */}
-                            <TextField
-                                fullWidth
-                                label="Şifre"
-                                type={showPassword ? 'text' : 'password'}
-                                variant="outlined"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                onFocus={() => setMascotState(showPassword ? 3 : 2)}
-                                onBlur={() => setMascotState(0)}
-                                sx={{
-                                    mb: 4,
-                                    '& .MuiOutlinedInput-root': {
-                                        color: '#0F172A',
-                                        bgcolor: '#F8FAFC',
-                                        borderRadius: 3,
-                                        '& fieldset': { borderColor: 'rgba(0,0,0,0.12)', transition: '0.3s' },
-                                        '&:hover fieldset': { borderColor: colors.primary },
-                                        '&.Mui-focused fieldset': { borderColor: colors.primary, borderWidth: 2 }
-                                    },
-                                    '& .MuiInputLabel-root': { color: colors.textSec },
-                                    '& .MuiInputLabel-root.Mui-focused': { color: colors.primary }
-                                }}
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <VpnKeyIcon sx={{ color: (mascotState === 2 || mascotState === 3) ? colors.primary : colors.textSec }} />
-                                        </InputAdornment>
-                                    ),
-                                    endAdornment: (
-                                        <InputAdornment position="end">
-                                            <IconButton
-                                                onClick={() => {
-                                                    const newShow = !showPassword;
-                                                    setShowPassword(newShow);
-                                                    if (password.length > 0 || mascotState === 2) {
-                                                        setMascotState(newShow ? 3 : 2);
-                                                    }
-                                                }}
-                                                edge="end"
-                                                sx={{ color: colors.textSec }}
-                                            >
-                                                {showPassword ? <VisibilityOff /> : <Visibility />}
-                                            </IconButton>
-                                        </InputAdornment>
-                                    ),
-                                }}
-                            />
-
-                            <Button
-                                type="submit"
-                                fullWidth
-                                variant="contained"
-                                size="large"
-                                disabled={loading}
-                                sx={{
-                                    bgcolor: colors.primary,
-                                    color: 'white',
-                                    fontWeight: 'bold',
-                                    py: 2,
-                                    borderRadius: 3,
-                                    textTransform: 'none',
-                                    fontSize: '1.1rem',
-                                    boxShadow: '0 8px 25px rgba(59, 130, 246, 0.4)',
-                                    transition: 'all 0.3s',
-                                    '&:hover': {
-                                        bgcolor: '#2563eb',
-                                        transform: 'translateY(-3px)',
-                                        boxShadow: '0 12px 30px rgba(59, 130, 246, 0.6)'
-                                    }
-                                }}
-                            >
-                                {loading ? <CircularProgress size={26} color="inherit" /> : 'Giriş Yap'}
-                            </Button>
-                        </form>
-
-                        <Box sx={{ mt: 4, textAlign: 'center', opacity: 0.5 }}>
-                            <Typography variant="caption" sx={{ color: '#64748B' }}>
-                                © {new Date().getFullYear()} Kıyı Medya Yönetim Paneli
-                            </Typography>
-                        </Box>
-
-                    </Paper>
-                </Grow>
-            </Container>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.15)', textAlign: 'center', mt: 6, display: 'block' }}>
+                    © {new Date().getFullYear()} Kıyı Medya Yönetim Sistemi
+                </Typography>
+            </Box>
         </Box>
     );
 };

@@ -9,6 +9,7 @@ import {
     Avatar, Switch, CircularProgress, Divider, List, ListItem, ListItemText,
     ListItemAvatar, Badge, Snackbar, Alert
 } from '@mui/material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -48,6 +49,22 @@ import Accounting from '../components/Accounting';
 import MusteriKartiTab from '../components/MusteriKartiTab';
 import PaketlerTab from '../components/PaketlerTab';
 import ProfilTab from '../components/ProfilTab';
+
+const adminTheme = createTheme({
+    palette: {
+        mode: 'light',
+        primary: { main: '#3B82F6' },
+        background: { default: '#F8FAFC', paper: '#FFFFFF' },
+        text: { primary: '#0F172A', secondary: '#64748B' },
+        divider: 'rgba(0,0,0,0.08)',
+    },
+    typography: { fontFamily: "'Inter', 'Outfit', sans-serif" },
+    shape: { borderRadius: 8 },
+    components: {
+        MuiPaper: { styleOverrides: { root: { backgroundImage: 'none' } } },
+        MuiButton: { styleOverrides: { root: { textTransform: 'none', fontWeight: 600 } } },
+    },
+});
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 
@@ -926,19 +943,23 @@ const AdminDashboard = () => {
         axios.defaults.headers.common['Authorization'] = `Bearer ${user.token || localStorage.getItem('token')}`;
     }, [user, navigate]);
 
-    if (!user) return <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh"><CircularProgress /></Box>;
+    if (!user) return <ThemeProvider theme={adminTheme}><Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" sx={{ bgcolor: '#F8FAFC' }}><CircularProgress /></Box></ThemeProvider>;
 
     const role = user.role;
-    if (role === 'patron') return <PatronPanel user={user} logout={logout} navigate={navigate} />;
-    if (role === 'yonetici') return <YoneticiPanel user={user} logout={logout} navigate={navigate} />;
-    if (role === 'stajyer') return <StajyerPanel user={user} logout={logout} navigate={navigate} />;
-    if (role === 'musteri') return <MusteriPanel user={user} logout={logout} navigate={navigate} />;
 
     return (
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" flexDirection="column" gap={2}>
-            <Typography variant="h6" color="text.secondary">Bilinmeyen rol: <strong>{role}</strong></Typography>
-            <Button variant="outlined" onClick={() => { logout(); navigate('/admin/login'); }}>Çıkış Yap</Button>
-        </Box>
+        <ThemeProvider theme={adminTheme}>
+            {role === 'patron'   && <PatronPanel   user={user} logout={logout} navigate={navigate} />}
+            {role === 'yonetici' && <YoneticiPanel user={user} logout={logout} navigate={navigate} />}
+            {role === 'stajyer'  && <StajyerPanel  user={user} logout={logout} navigate={navigate} />}
+            {role === 'musteri'  && <MusteriPanel  user={user} logout={logout} navigate={navigate} />}
+            {!['patron','yonetici','stajyer','musteri'].includes(role) && (
+                <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" flexDirection="column" gap={2} sx={{ bgcolor: '#F8FAFC' }}>
+                    <Typography variant="h6" color="text.secondary">Bilinmeyen rol: <strong>{role}</strong></Typography>
+                    <Button variant="outlined" onClick={() => { logout(); navigate('/admin/login'); }}>Çıkış Yap</Button>
+                </Box>
+            )}
+        </ThemeProvider>
     );
 };
 

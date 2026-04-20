@@ -1,21 +1,37 @@
 // src/pages/Settings.jsx
 import React, { useState, useEffect } from 'react';
-import { 
-    Container, Paper, Typography, TextField, Button, Box, 
+import {
+    Container, Paper, Typography, TextField, Button, Box,
     Avatar, Grid, Alert, Tabs, Tab, Stack, Divider, InputAdornment, IconButton, Tooltip,
-    useTheme // YENİ: Tema hook'u
+    useTheme
 } from '@mui/material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 import SaveIcon from '@mui/icons-material/Save';
 import LockResetIcon from '@mui/icons-material/LockReset';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import PhoneIcon from '@mui/icons-material/Phone';
 import EmailIcon from '@mui/icons-material/Email';
 import BadgeIcon from '@mui/icons-material/Badge';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload'; 
-import DeleteIcon from '@mui/icons-material/Delete'; 
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 import { SERVER_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
+
+const adminTheme = createTheme({
+    palette: {
+        mode: 'light',
+        primary: { main: '#3B82F6' },
+        background: { default: '#F8FAFC', paper: '#FFFFFF' },
+        text: { primary: '#0F172A', secondary: '#64748B' },
+    },
+    typography: { fontFamily: "'Inter', 'Outfit', sans-serif" },
+    shape: { borderRadius: 8 },
+    components: {
+        MuiPaper: { styleOverrides: { root: { backgroundImage: 'none' } } },
+        MuiButton: { styleOverrides: { root: { textTransform: 'none', fontWeight: 600 } } },
+    },
+});
 
 const Settings = () => {
     const theme = useTheme(); // Tema kullanımı
@@ -151,6 +167,8 @@ const Settings = () => {
     };
 
     return (
+        <ThemeProvider theme={adminTheme}>
+        <Box sx={{ bgcolor: '#F8FAFC', minHeight: '100vh' }}>
         <Container maxWidth="md" sx={{ mt: 4, mb: 8 }}>
             <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ color: colors.primary }}>
                 Hesap Ayarları
@@ -297,6 +315,8 @@ const Settings = () => {
                 </Box>
             </Paper>
         </Container>
+        </Box>
+        </ThemeProvider>
     );
 };
 
