@@ -7,7 +7,7 @@ import {
     Dialog, DialogTitle, DialogContent, DialogActions, LinearProgress, Paper,
     Grid, Tooltip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Avatar, Switch, CircularProgress, Divider, List, ListItem, ListItemText,
-    ListItemAvatar, Badge, Snackbar, Alert
+    ListItemAvatar, Badge, Snackbar, Alert, Drawer
 } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import axios from 'axios';
@@ -25,6 +25,7 @@ import ViewKanbanIcon from '@mui/icons-material/ViewKanban';
 import CalculateIcon from '@mui/icons-material/Calculate';
 import BookIcon from '@mui/icons-material/Book';
 import LogoutIcon from '@mui/icons-material/Logout';
+import MenuIcon from '@mui/icons-material/Menu';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ReplyIcon from '@mui/icons-material/Reply';
@@ -109,24 +110,14 @@ const serviceOptions = [
 
 // ─── SHARED: SIDEBAR ─────────────────────────────────────────────────────────
 
-const Sidebar = ({ user, logout, navigate, navItems, activeTab, setActiveTab }) => (
-    <Box sx={{
-        width: 260, height: '100vh', bgcolor: C.sidebar, display: 'flex',
-        flexDirection: 'column', position: 'fixed', left: 0, top: 0, zIndex: 200,
-        borderRight: '1px solid rgba(255,255,255,0.06)',
-        boxShadow: '4px 0 24px rgba(0,0,0,0.15)'
-    }}>
-        {/* Logo */}
-        <Box sx={{ px: 3, py: 2.5, borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-            <Typography variant="h6" fontWeight={800} sx={{ color: C.accent, letterSpacing: '-0.03em', fontSize: '1.1rem' }}>
-                Kıyı Medya
-            </Typography>
-            <Typography sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.62rem', letterSpacing: '0.18em', fontWeight: 600, mt: 0.2 }}>
-                YÖNETİM PANELİ
-            </Typography>
-        </Box>
+const SIDEBAR_W = 260;
 
-        {/* User info */}
+const SidebarContent = ({ user, logout, navigate, navItems, activeTab, setActiveTab, onClose }) => (
+    <Box sx={{ width: SIDEBAR_W, height: '100%', bgcolor: C.sidebar, display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ px: 3, py: 2.5, borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+            <Typography variant="h6" fontWeight={800} sx={{ color: C.accent, letterSpacing: '-0.03em', fontSize: '1.1rem' }}>Kıyı Medya</Typography>
+            <Typography sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.62rem', letterSpacing: '0.18em', fontWeight: 600, mt: 0.2 }}>YÖNETİM PANELİ</Typography>
+        </Box>
         <Box sx={{ px: 2.5, py: 2, borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
             <Stack direction="row" spacing={1.5} alignItems="center">
                 <Avatar sx={{ bgcolor: C.accent, width: 34, height: 34, fontSize: '0.8rem', fontWeight: 700, flexShrink: 0 }}>
@@ -138,34 +129,17 @@ const Sidebar = ({ user, logout, navigate, navItems, activeTab, setActiveTab }) 
                 </Box>
             </Stack>
         </Box>
-
-        {/* Nav */}
         <Box sx={{ flex: 1, py: 1.5, overflowY: 'auto', '&::-webkit-scrollbar': { width: 4 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 2 } }}>
             {navItems.map((item) => (
-                <Box
-                    key={item.key}
-                    onClick={() => setActiveTab(item.key)}
-                    sx={{
-                        mx: 1.5, mb: 0.5, px: 2, py: 1.2, borderRadius: 1.5, cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', gap: 1.5,
-                        bgcolor: activeTab === item.key ? C.sidebarActive : 'transparent',
-                        borderLeft: activeTab === item.key ? `3px solid ${C.accent}` : '3px solid transparent',
-                        transition: 'all 0.18s ease',
-                        '&:hover': { bgcolor: activeTab === item.key ? C.sidebarActive : C.sidebarHover }
-                    }}
-                >
-                    <Box sx={{ color: activeTab === item.key ? C.accent : 'rgba(255,255,255,0.45)', display: 'flex', flexShrink: 0 }}>
-                        {item.icon}
-                    </Box>
-                    <Typography variant="body2" fontWeight={activeTab === item.key ? 700 : 400}
-                        sx={{ color: activeTab === item.key ? '#fff' : 'rgba(255,255,255,0.55)', fontSize: '0.81rem', letterSpacing: 0.2, whiteSpace: 'nowrap' }}>
+                <Box key={item.key} onClick={() => { setActiveTab(item.key); onClose && onClose(); }}
+                    sx={{ mx: 1.5, mb: 0.5, px: 2, py: 1.4, borderRadius: 1.5, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 1.5, bgcolor: activeTab === item.key ? C.sidebarActive : 'transparent', borderLeft: activeTab === item.key ? `3px solid ${C.accent}` : '3px solid transparent', transition: 'all 0.18s ease', '&:hover': { bgcolor: activeTab === item.key ? C.sidebarActive : C.sidebarHover } }}>
+                    <Box sx={{ color: activeTab === item.key ? C.accent : 'rgba(255,255,255,0.45)', display: 'flex', flexShrink: 0 }}>{item.icon}</Box>
+                    <Typography variant="body2" fontWeight={activeTab === item.key ? 700 : 400} sx={{ color: activeTab === item.key ? '#fff' : 'rgba(255,255,255,0.55)', fontSize: '0.85rem', letterSpacing: 0.2 }}>
                         {item.label}
                     </Typography>
                 </Box>
             ))}
         </Box>
-
-        {/* Logout */}
         <Box sx={{ px: 2, py: 1.5, borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
             <Button fullWidth startIcon={<LogoutIcon fontSize="small" />} onClick={() => { logout(); navigate('/admin/login'); }}
                 sx={{ color: 'rgba(255,255,255,0.45)', justifyContent: 'flex-start', textTransform: 'none', fontWeight: 600, fontSize: '0.81rem', borderRadius: 1.5, py: 1, '&:hover': { color: '#EF4444', bgcolor: 'rgba(239,68,68,0.08)' } }}>
@@ -175,34 +149,41 @@ const Sidebar = ({ user, logout, navigate, navItems, activeTab, setActiveTab }) 
     </Box>
 );
 
-const PageHeader = ({ title, subtitle }) => (
-    <Box sx={{
-        bgcolor: '#fff',
-        px: 4, py: 2.5,
-        borderBottom: '1px solid #E2E8F0',
-        position: 'sticky',
-        top: 0,
-        zIndex: 10,
-        flexShrink: 0
-    }}>
-        <Typography variant="h5" fontWeight={800} color={C.text} sx={{ lineHeight: 1.2, letterSpacing: '-0.02em' }}>
-            {title}
-        </Typography>
-        {subtitle && (
-            <Typography variant="body2" color={C.textSec} sx={{ mt: 0.3 }}>{subtitle}</Typography>
-        )}
+const Sidebar = ({ user, logout, navigate, navItems, activeTab, setActiveTab, mobileOpen, onMobileClose }) => (
+    <>
+        {/* Mobil: geçici Drawer */}
+        <Drawer variant="temporary" open={mobileOpen} onClose={onMobileClose} ModalProps={{ keepMounted: true }}
+            sx={{ display: { xs: 'block', md: 'none' }, '& .MuiDrawer-paper': { width: SIDEBAR_W, bgcolor: C.sidebar, border: 'none', boxShadow: '4px 0 24px rgba(0,0,0,0.3)' } }}>
+            <SidebarContent user={user} logout={logout} navigate={navigate} navItems={navItems} activeTab={activeTab} setActiveTab={setActiveTab} onClose={onMobileClose} />
+        </Drawer>
+        {/* Desktop: sabit */}
+        <Box sx={{ display: { xs: 'none', md: 'block' }, position: 'fixed', left: 0, top: 0, zIndex: 200, height: '100vh', borderRight: '1px solid rgba(255,255,255,0.06)', boxShadow: '4px 0 24px rgba(0,0,0,0.15)' }}>
+            <SidebarContent user={user} logout={logout} navigate={navigate} navItems={navItems} activeTab={activeTab} setActiveTab={setActiveTab} />
+        </Box>
+    </>
+);
+
+const PageHeader = ({ title, subtitle, onMenuClick }) => (
+    <Box sx={{ bgcolor: '#fff', px: { xs: 2, md: 4 }, py: { xs: 1.5, md: 2.5 }, borderBottom: '1px solid #E2E8F0', position: 'sticky', top: 0, zIndex: 10, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <IconButton onClick={onMenuClick} sx={{ display: { md: 'none' }, color: C.text, flexShrink: 0 }}>
+            <MenuIcon />
+        </IconButton>
+        <Box>
+            <Typography variant="h6" fontWeight={800} color={C.text} sx={{ lineHeight: 1.2, letterSpacing: '-0.02em', fontSize: { xs: '1rem', md: '1.25rem' } }}>{title}</Typography>
+            {subtitle && <Typography variant="body2" color={C.textSec} sx={{ mt: 0.2, fontSize: '0.8rem' }}>{subtitle}</Typography>}
+        </Box>
     </Box>
 );
 
 const ContentArea = ({ children }) => (
     <Box sx={{
-        ml: '260px',
+        ml: { xs: 0, md: `${SIDEBAR_W}px` },
         minHeight: '100vh',
         bgcolor: C.content,
         display: 'flex',
         flexDirection: 'column',
-        width: 'calc(100% - 260px)',
-        overflowX: 'hidden'
+        width: { xs: '100%', md: `calc(100% - ${SIDEBAR_W}px)` },
+        overflowX: 'hidden',
     }}>
         {children}
     </Box>
@@ -785,6 +766,7 @@ const PatronPanel = ({ user: initialUser, logout, navigate }) => {
     const [activeTab, setActiveTab] = useState('kullanici');
     const [msg, setMsg] = useState(null);
     const [user, setUser] = useState(initialUser);
+    const [mobileOpen, setMobileOpen] = useState(false);
 
     const navItems = [
         { key: 'kullanici',   label: 'Kullanıcı Yönetimi', icon: <PeopleIcon fontSize="small" /> },
@@ -800,10 +782,10 @@ const PatronPanel = ({ user: initialUser, logout, navigate }) => {
 
     return (
         <Box sx={{ minHeight: '100vh', bgcolor: C.content }}>
-            <Sidebar user={user} logout={logout} navigate={navigate} navItems={navItems} activeTab={activeTab} setActiveTab={setActiveTab} />
+            <Sidebar user={user} logout={logout} navigate={navigate} navItems={navItems} activeTab={activeTab} setActiveTab={setActiveTab} mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
             <ContentArea>
-                <PageHeader title={navItems.find(n => n.key === activeTab)?.label} />
-                <Box sx={{ p: 4, flex: 1 }}>
+                <PageHeader title={navItems.find(n => n.key === activeTab)?.label} onMenuClick={() => setMobileOpen(true)} />
+                <Box sx={{ p: { xs: 2, md: 4 }, flex: 1 }}>
                     {msg && <Alert severity={msg.type} sx={{ mb: 3 }} onClose={() => setMsg(null)}>{msg.text}</Alert>}
                     {activeTab === 'kullanici'   && <KullaniciYonetimiTab user={user} setMsg={setMsg} />}
                     {activeTab === 'musterikart' && <MusteriKartiTab setMsg={setMsg} />}
@@ -826,6 +808,7 @@ const YoneticiPanel = ({ user: initialUser, logout, navigate }) => {
     const [activeTab, setActiveTab] = useState('portfolyo');
     const [msg, setMsg] = useState(null);
     const [user, setUser] = useState(initialUser);
+    const [mobileOpen, setMobileOpen] = useState(false);
 
     const navItems = [
         { key: 'musterikart', label: 'Müşteri Kartları', icon: <BadgeIcon fontSize="small" /> },
@@ -840,10 +823,10 @@ const YoneticiPanel = ({ user: initialUser, logout, navigate }) => {
 
     return (
         <Box sx={{ minHeight: '100vh', bgcolor: C.content }}>
-            <Sidebar user={user} logout={logout} navigate={navigate} navItems={navItems} activeTab={activeTab} setActiveTab={setActiveTab} />
+            <Sidebar user={user} logout={logout} navigate={navigate} navItems={navItems} activeTab={activeTab} setActiveTab={setActiveTab} mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
             <ContentArea>
-                <PageHeader title={navItems.find(n => n.key === activeTab)?.label} />
-                <Box sx={{ p: 4, flex: 1 }}>
+                <PageHeader title={navItems.find(n => n.key === activeTab)?.label} onMenuClick={() => setMobileOpen(true)} />
+                <Box sx={{ p: { xs: 2, md: 4 }, flex: 1 }}>
                     {msg && <Alert severity={msg.type} sx={{ mb: 3 }} onClose={() => setMsg(null)}>{msg.text}</Alert>}
                     {activeTab === 'musterikart' && <MusteriKartiTab setMsg={setMsg} />}
                     {activeTab === 'paketler'    && <PaketlerTab setMsg={setMsg} />}
@@ -865,6 +848,7 @@ const StajyerPanel = ({ user: initialUser, logout, navigate }) => {
     const [activeTab, setActiveTab] = useState('musterikart');
     const [msg, setMsg] = useState(null);
     const [user, setUser] = useState(initialUser);
+    const [mobileOpen, setMobileOpen] = useState(false);
 
     const navItems = [
         { key: 'musterikart', label: 'Müşteri Kartları', icon: <BadgeIcon fontSize="small" /> },
@@ -873,13 +857,14 @@ const StajyerPanel = ({ user: initialUser, logout, navigate }) => {
 
     return (
         <Box sx={{ minHeight: '100vh', bgcolor: C.content }}>
-            <Sidebar user={user} logout={logout} navigate={navigate} navItems={navItems} activeTab={activeTab} setActiveTab={setActiveTab} />
+            <Sidebar user={user} logout={logout} navigate={navigate} navItems={navItems} activeTab={activeTab} setActiveTab={setActiveTab} mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
             <ContentArea>
                 <PageHeader
                     title={navItems.find(n => n.key === activeTab)?.label}
                     subtitle={`Merhaba, ${user?.name}`}
+                    onMenuClick={() => setMobileOpen(true)}
                 />
-                <Box sx={{ p: 4, flex: 1 }}>
+                <Box sx={{ p: { xs: 2, md: 4 }, flex: 1 }}>
                     {msg && <Alert severity={msg.type} sx={{ mb: 3 }} onClose={() => setMsg(null)}>{msg.text}</Alert>}
                     {activeTab === 'musterikart' && <MusteriKartiTab setMsg={setMsg} />}
                     {activeTab === 'profil'      && <ProfilTab user={user} onUserUpdate={setUser} />}
@@ -899,7 +884,7 @@ const MusteriPanel = ({ user, logout, navigate }) => {
             {/* Top bar */}
             <Box sx={{
                 bgcolor: C.sidebar,
-                px: 4, py: 0,
+                px: { xs: 2, md: 4 }, py: 0,
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 height: 60, flexShrink: 0,
                 boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
@@ -924,7 +909,7 @@ const MusteriPanel = ({ user, logout, navigate }) => {
             </Box>
 
             {/* Content */}
-            <Box sx={{ flex: 1, p: 4, maxWidth: 1200, mx: 'auto', width: '100%' }}>
+            <Box sx={{ flex: 1, p: { xs: 2, md: 4 }, maxWidth: 1200, mx: 'auto', width: '100%' }}>
                 {msg && <Alert severity={msg.type} sx={{ mb: 3 }} onClose={() => setMsg(null)}>{msg.text}</Alert>}
                 <MusteriKartiTab setMsg={setMsg} readOnly={true} singleCard={true} />
             </Box>
