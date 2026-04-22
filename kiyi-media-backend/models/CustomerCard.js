@@ -130,6 +130,28 @@ const CustomerCardSchema = new mongoose.Schema({
 
     notes: { type: String, default: '' },
 
+    customServices: [{
+        label:       { type: String, default: '' },
+        active:      { type: Boolean, default: true },
+        progress:    { type: Number, default: 0, min: 0, max: 100 },
+        progressLog: [{ progress: Number, note: String, date: { type: Date, default: Date.now } }]
+    }],
+
+    internalNotes: [{
+        content:    { type: String, required: true },
+        authorId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        authorName: { type: String, default: '' },
+        tag:        { type: String, enum: ['info', 'onemli', 'uyari'], default: 'info' },
+        createdAt:  { type: Date, default: Date.now }
+    }],
+
+    activityLog: [{
+        userId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        userName:  { type: String, default: '' },
+        action:    { type: String, default: '' },
+        createdAt: { type: Date, default: Date.now }
+    }],
+
     // Müşteri dijital varlıkları
     driveLink:     { type: String, default: '' },
     instagramLink: { type: String, default: '' },

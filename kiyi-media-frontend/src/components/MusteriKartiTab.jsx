@@ -55,6 +55,12 @@ import ContactPageIcon from '@mui/icons-material/ContactPage';
 import ArticleIcon from '@mui/icons-material/Article';
 import SignpostIcon from '@mui/icons-material/Signpost';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
+import NoteAltIcon from '@mui/icons-material/NoteAlt';
+import HistoryIcon from '@mui/icons-material/History';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import ReportProblemOutlinedIcon from '@mui/icons-material/ReportProblemOutlined';
+import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
+import { useAuth } from '../context/AuthContext';
 
 const API = `${SERVER_URL}/api/customer-cards`;
 
@@ -121,6 +127,7 @@ const emptyCard = {
     meetings: [], revisions: [], kanban: [],
     kanbanPeriod: { periodNo: 1, startDate: '', endDate: '' },
     kanbanHistory: [],
+    customServices: [],
     notes: '',
     driveLink: '', instagramLink: '', facebookLink: '', twitterLink: '',
     linkedinLink: '', tiktokLink: '', websiteLink: '', youtubeLink: ''
@@ -509,17 +516,35 @@ const CardDetail = ({ card: initialCard, onBack, onSaved, users, readOnly }) => 
     const emptyAd = { name: '', platform: 'Instagram', startDate: '', endDate: '', budget: 0, spent: 0, results: { followers: 0, messages: 0, likes: 0, comments: 0, views: 0, shares: 0, sales: 0, salesAmount: 0 } };
     const [newSocialForms, setNewSocialForms] = useState({ posts: { sharedAt: '', note: '' }, stories: { sharedAt: '', note: '' }, reels: { sharedAt: '', note: '' } });
     const [editingSocialEntry, setEditingSocialEntry] = useState(null);
+    const [newNoteContent, setNewNoteContent] = useState('');
+    const [newNoteTag, setNewNoteTag] = useState('info');
+    const [noteLoading, setNoteLoading] = useState(false);
+    const { user: currentUser } = useAuth();
 
     useEffect(() => {
         axios.get(`${SERVER_URL}/api/packages`).then(r => { if (r.data.success) setPackages(r.data.data); }).catch(() => {});
     }, []);
 
-    // Seçili paketin datasını card'a ekle (kota gösterimi için)
+    // Seçili paketin datasını card'a ekle + extraServices → customServices senkronizasyonu
     useEffect(() => {
         if (!packages.length) return;
         const pkgId = card.packageRef?._id || card.packageRef;
         const found = packages.find(p => p._id === pkgId);
-        setCard(d => ({ ...d, _packageData: found || null }));
+        setCard(d => {
+            const updated = { ...d, _packageData: found || null };
+            if (found?.extraServices?.length) {
+                const existing = d.customServices || [];
+                const existingLabels = existing.map(s => s.label.toLowerCase());
+                const toAdd = (found.extraServices || []).filter(s => !existingLabels.includes(s.label.toLowerCase()));
+                if (toAdd.length > 0) {
+                    updated.customServices = [
+                        ...existing,
+                        ...toAdd.map(s => ({ label: s.label, active: true, progress: 0, progressLog: [] }))
+                    ];
+                }
+            }
+            return updated;
+        });
     }, [packages, card.packageRef]);
 
     const set = (field, val) => { setCard(d => ({ ...d, [field]: val })); setDirty(true); };
@@ -569,6 +594,23 @@ const CardDetail = ({ card: initialCard, onBack, onSaved, users, readOnly }) => 
         const catMap = { posts: 'post', stories: 'story', reels: 'reels' };
         setEditingRevision({ idx: -1, data: { ...emptyRevision, category: catMap[type] || 'diger', description: entry.note || '', receivedAt: entry.sharedAt ? entry.sharedAt.substring(0, 10) : '' } });
         setRevisionDialog(true);
+    };
+
+    // internal note helpers
+    const handleAddNote = async () => {
+        if (!newNoteContent.trim() || !card._id) return;
+        setNoteLoading(true);
+        try {
+            const r = await axios.post(`${API}/${card._id}/notes`, { content: newNoteContent.trim(), tag: newNoteTag }, { headers: authHeader() });
+            if (r.data.success) { setCard(r.data.data); setNewNoteContent(''); setNewNoteTag('info'); }
+        } catch { } finally { setNoteLoading(false); }
+    };
+    const handleDeleteNote = async (noteId) => {
+        if (!window.confirm('Not silinsin mi?')) return;
+        try {
+            const r = await axios.delete(`${API}/${card._id}/notes/${noteId}`, { headers: authHeader() });
+            if (r.data.success) setCard(r.data.data);
+        } catch { }
     };
 
     const closePeriod = async () => {
@@ -646,6 +688,8 @@ const CardDetail = ({ card: initialCard, onBack, onSaved, users, readOnly }) => 
         { label: 'Toplantılar', icon: <EventIcon fontSize="small" /> },
         { label: 'Revizyonlar', icon: <BrushIcon fontSize="small" /> },
         { label: 'Reklamlar',   icon: <CampaignIcon fontSize="small" /> },
+        { label: 'İç Notlar',   icon: <NoteAltIcon fontSize="small" /> },
+        { label: 'Geçmiş',      icon: <HistoryIcon fontSize="small" /> },
     ];
     const TABS = readOnly ? ALL_TABS.slice(0, 1) : ALL_TABS;
 
@@ -1555,7 +1599,6 @@ const CardDetail = ({ card: initialCard, onBack, onSaved, users, readOnly }) => 
                             const logEntries = [...(card[item.log] || [])].reverse();
                             return (
                                 <Paper key={item.field} sx={{ p: 3, borderRadius: '14px', border: '1px solid #EEF2F7' }}>
-                                    {/* Başlık + aktif switch */}
                                     <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
                                         <Typography fontWeight={700} fontSize="1rem" display="flex" alignItems="center" gap={1}>{item.icon} {item.label}</Typography>
                                         {!readOnly
@@ -1563,10 +1606,8 @@ const CardDetail = ({ card: initialCard, onBack, onSaved, users, readOnly }) => 
                                             : <Chip size="small" label={card[item.field] ? 'Aktif' : 'Pasif'} sx={{ bgcolor: card[item.field] ? item.color + '20' : '#F1F5F9', color: card[item.field] ? item.color : '#64748B', fontWeight: 700 }} />
                                         }
                                     </Stack>
-
                                     {card[item.field] && (
                                         <Stack spacing={2.5}>
-                                            {/* İlerleme çubuğu */}
                                             <Box>
                                                 <Stack direction="row" justifyContent="space-between" mb={1}>
                                                     <Typography variant="body2" color="text.secondary">Tamamlanma</Typography>
@@ -1575,25 +1616,14 @@ const CardDetail = ({ card: initialCard, onBack, onSaved, users, readOnly }) => 
                                                 <LinearProgress variant="determinate" value={card[item.prog] || 0}
                                                     sx={{ height: 14, borderRadius: 7, bgcolor: item.color + '20', '& .MuiLinearProgress-bar': { bgcolor: item.color, borderRadius: 7 } }} />
                                             </Box>
-
-                                            {/* İlerleme Güncelleme Formu */}
                                             {!readOnly && (
-                                                <ProgressUpdateForm
-                                                    color={item.color}
-                                                    currentProg={card[item.prog] || 0}
+                                                <ProgressUpdateForm color={item.color} currentProg={card[item.prog] || 0}
                                                     onUpdate={(prog, note) => {
                                                         const newEntry = { progress: prog, note, date: new Date().toISOString() };
-                                                        setCard(d => ({
-                                                            ...d,
-                                                            [item.prog]: prog,
-                                                            [item.log]: [...(d[item.log] || []), newEntry]
-                                                        }));
+                                                        setCard(d => ({ ...d, [item.prog]: prog, [item.log]: [...(d[item.log] || []), newEntry] }));
                                                         setDirty(true);
-                                                    }}
-                                                />
+                                                    }} />
                                             )}
-
-                                            {/* Geçmiş İlerleme Notları */}
                                             {logEntries.length > 0 && (
                                                 <Box>
                                                     <Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase" letterSpacing="0.06em" display="block" mb={1.5}>
@@ -1610,7 +1640,7 @@ const CardDetail = ({ card: initialCard, onBack, onSaved, users, readOnly }) => 
                                                                 </Box>
                                                                 <Box sx={{ pb: 1.5, flex: 1 }}>
                                                                     <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                                                                        <Typography variant="body2" fontWeight={600} sx={{ color: '#0F172A' }}>{entry.note || '—'}</Typography>
+                                                                        <Typography variant="body2" fontWeight={600} color="#0F172A">{entry.note || '—'}</Typography>
                                                                         <Typography variant="caption" color="text.secondary" sx={{ ml: 1, flexShrink: 0 }}>{fmt(entry.date)}</Typography>
                                                                     </Stack>
                                                                 </Box>
@@ -1619,9 +1649,75 @@ const CardDetail = ({ card: initialCard, onBack, onSaved, users, readOnly }) => 
                                                     </Stack>
                                                 </Box>
                                             )}
-                                            {logEntries.length === 0 && (
-                                                <Typography variant="caption" color="text.secondary">Henüz ilerleme notu eklenmedi.</Typography>
+                                            {logEntries.length === 0 && <Typography variant="caption" color="text.secondary">Henüz ilerleme notu eklenmedi.</Typography>}
+                                        </Stack>
+                                    )}
+                                </Paper>
+                            );
+                        })}
+
+                        {/* ── PAKET EK HİZMETLERİ (customServices) ── */}
+                        {(card.customServices || []).map((svc, idx) => {
+                            const CUSTOM_COLORS = ['#10B981','#3B82F6','#8B5CF6','#F59E0B','#EC4899','#06B6D4','#EF4444','#F97316'];
+                            const color = CUSTOM_COLORS[idx % CUSTOM_COLORS.length];
+                            const logEntries = [...(svc.progressLog || [])].reverse();
+                            return (
+                                <Paper key={idx} sx={{ p: 3, borderRadius: '14px', border: `1px solid ${color}30` }}>
+                                    <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
+                                        <Typography fontWeight={700} fontSize="1rem" sx={{ color }}>⚙ {svc.label}</Typography>
+                                        {!readOnly
+                                            ? <FormControlLabel control={<Switch checked={!!svc.active} onChange={e => {
+                                                const arr = [...(card.customServices || [])];
+                                                arr[idx] = { ...arr[idx], active: e.target.checked };
+                                                set('customServices', arr);
+                                              }} />} label="Aktif" />
+                                            : <Chip size="small" label={svc.active ? 'Aktif' : 'Pasif'} sx={{ bgcolor: svc.active ? color + '20' : '#F1F5F9', color: svc.active ? color : '#64748B', fontWeight: 700 }} />
+                                        }
+                                    </Stack>
+                                    {svc.active && (
+                                        <Stack spacing={2.5}>
+                                            <Box>
+                                                <Stack direction="row" justifyContent="space-between" mb={1}>
+                                                    <Typography variant="body2" color="text.secondary">Tamamlanma</Typography>
+                                                    <Typography fontWeight={900} fontSize="1.1rem" sx={{ color }}>%{svc.progress || 0}</Typography>
+                                                </Stack>
+                                                <LinearProgress variant="determinate" value={svc.progress || 0}
+                                                    sx={{ height: 14, borderRadius: 7, bgcolor: color + '20', '& .MuiLinearProgress-bar': { bgcolor: color, borderRadius: 7 } }} />
+                                            </Box>
+                                            {!readOnly && (
+                                                <ProgressUpdateForm color={color} currentProg={svc.progress || 0}
+                                                    onUpdate={(prog, note) => {
+                                                        const arr = [...(card.customServices || [])];
+                                                        arr[idx] = { ...arr[idx], progress: prog, progressLog: [...(arr[idx].progressLog || []), { progress: prog, note, date: new Date().toISOString() }] };
+                                                        set('customServices', arr);
+                                                    }} />
                                             )}
+                                            {logEntries.length > 0 && (
+                                                <Box>
+                                                    <Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase" letterSpacing="0.06em" display="block" mb={1.5}>
+                                                        İlerleme Geçmişi ({logEntries.length} kayıt)
+                                                    </Typography>
+                                                    <Stack spacing={1}>
+                                                        {logEntries.map((entry, i) => (
+                                                            <Box key={i} sx={{ display: 'flex', gap: 1.5 }}>
+                                                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 0.5 }}>
+                                                                    <Box sx={{ width: 28, height: 28, borderRadius: '50%', bgcolor: color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                                        <Typography sx={{ fontSize: '0.6rem', fontWeight: 900, color: '#fff' }}>%{entry.progress}</Typography>
+                                                                    </Box>
+                                                                    {i < logEntries.length - 1 && <Box sx={{ width: 2, flex: 1, bgcolor: '#E2E8F0', mt: 0.5 }} />}
+                                                                </Box>
+                                                                <Box sx={{ pb: 1.5, flex: 1 }}>
+                                                                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                                                                        <Typography variant="body2" fontWeight={600} color="#0F172A">{entry.note || '—'}</Typography>
+                                                                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1, flexShrink: 0 }}>{fmt(entry.date)}</Typography>
+                                                                    </Stack>
+                                                                </Box>
+                                                            </Box>
+                                                        ))}
+                                                    </Stack>
+                                                </Box>
+                                            )}
+                                            {logEntries.length === 0 && <Typography variant="caption" color="text.secondary">Henüz ilerleme notu eklenmedi.</Typography>}
                                         </Stack>
                                     )}
                                 </Paper>
@@ -2371,6 +2467,179 @@ const CardDetail = ({ card: initialCard, onBack, onSaved, users, readOnly }) => 
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* ── TAB 10: İÇ NOTLAR ────────────────────────────────────────── */}
+            {tab === 10 && (() => {
+                const notes = [...(card.internalNotes || [])].reverse();
+                const TAG_META = {
+                    info:    { label: 'Bilgi',   color: '#3B82F6', bg: '#EFF6FF', icon: <InfoOutlinedIcon sx={{ fontSize: 14 }} /> },
+                    onemli:  { label: 'Önemli',  color: '#8B5CF6', bg: '#F5F3FF', icon: <PriorityHighIcon sx={{ fontSize: 14 }} /> },
+                    uyari:   { label: 'Uyarı',   color: '#EF4444', bg: '#FEF2F2', icon: <ReportProblemOutlinedIcon sx={{ fontSize: 14 }} /> },
+                };
+                return (
+                    <Stack spacing={3}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                            <Box>
+                                <Typography fontWeight={800} fontSize="1rem" color="#0F172A">İç Notlar</Typography>
+                                <Typography variant="caption" color="#94A3B8">Sadece ekip görebilir — müşteriye yansımaz</Typography>
+                            </Box>
+                            <Chip label={`${notes.length} not`} size="small" sx={{ bgcolor: '#F1F5F9', fontWeight: 700 }} />
+                        </Stack>
+
+                        {/* Yeni not formu */}
+                        {!readOnly && (
+                            <Paper sx={{ p: 2.5, borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+                                <Typography variant="caption" fontWeight={700} color="#64748B" display="block" mb={1.5} textTransform="uppercase" letterSpacing="0.06em">Yeni Not Ekle</Typography>
+                                <TextField
+                                    fullWidth multiline rows={3} placeholder="Not içeriğini yazın..."
+                                    value={newNoteContent}
+                                    onChange={e => setNewNoteContent(e.target.value)}
+                                    sx={{ mb: 2, '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+                                />
+                                <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1.5}>
+                                    <Stack direction="row" spacing={1}>
+                                        {Object.entries(TAG_META).map(([key, meta]) => (
+                                            <Chip key={key}
+                                                icon={<Box sx={{ color: newNoteTag === key ? '#fff' : meta.color, display: 'flex', ml: '6px !important' }}>{meta.icon}</Box>}
+                                                label={meta.label}
+                                                onClick={() => setNewNoteTag(key)}
+                                                sx={{
+                                                    cursor: 'pointer', fontWeight: 700, fontSize: '0.72rem', borderRadius: '8px',
+                                                    bgcolor: newNoteTag === key ? meta.color : meta.bg,
+                                                    color: newNoteTag === key ? '#fff' : meta.color,
+                                                    border: `1.5px solid ${newNoteTag === key ? meta.color : meta.color + '40'}`,
+                                                    transition: 'all 0.15s',
+                                                    '&:hover': { bgcolor: meta.color, color: '#fff' }
+                                                }}
+                                            />
+                                        ))}
+                                    </Stack>
+                                    <Button variant="contained" startIcon={<AddIcon />}
+                                        onClick={handleAddNote}
+                                        disabled={!newNoteContent.trim() || noteLoading}
+                                        sx={{ borderRadius: '10px', bgcolor: '#0F172A', '&:hover': { bgcolor: '#1E293B' }, fontWeight: 700, px: 2.5 }}>
+                                        {noteLoading ? 'Ekleniyor...' : 'Not Ekle'}
+                                    </Button>
+                                </Stack>
+                            </Paper>
+                        )}
+
+                        {/* Not listesi */}
+                        {notes.length === 0 ? (
+                            <Box textAlign="center" py={6} sx={{ border: '2px dashed #E2E8F0', borderRadius: '16px' }}>
+                                <NoteAltIcon sx={{ fontSize: 36, color: '#CBD5E1', mb: 1.5 }} />
+                                <Typography color="#94A3B8" fontWeight={600}>Henüz iç not eklenmedi</Typography>
+                            </Box>
+                        ) : (
+                            <Stack spacing={1.5}>
+                                {notes.map((note, i) => {
+                                    const meta = TAG_META[note.tag] || TAG_META.info;
+                                    const canDelete = !readOnly && (
+                                        String(note.authorId) === String(currentUser?._id) ||
+                                        ['patron', 'yonetici'].includes(currentUser?.role)
+                                    );
+                                    return (
+                                        <Paper key={note._id || i} sx={{ borderRadius: '14px', overflow: 'hidden', border: `1px solid ${meta.color}25`, boxShadow: 'none' }}>
+                                            <Box sx={{ px: 2.5, py: 1.2, bgcolor: meta.bg, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <Stack direction="row" spacing={1} alignItems="center">
+                                                    <Avatar sx={{ width: 26, height: 26, bgcolor: meta.color, fontSize: '0.65rem', fontWeight: 700 }}>
+                                                        {(note.authorName || '?').charAt(0).toUpperCase()}
+                                                    </Avatar>
+                                                    <Typography variant="caption" fontWeight={700} color={meta.color}>{note.authorName || 'Bilinmeyen'}</Typography>
+                                                    <Chip
+                                                        icon={<Box sx={{ color: meta.color, display: 'flex', ml: '4px !important' }}>{meta.icon}</Box>}
+                                                        label={meta.label}
+                                                        size="small"
+                                                        sx={{ bgcolor: 'transparent', color: meta.color, border: `1px solid ${meta.color}40`, fontWeight: 700, fontSize: '0.68rem', height: 20 }}
+                                                    />
+                                                </Stack>
+                                                <Stack direction="row" spacing={1} alignItems="center">
+                                                    <Typography variant="caption" color="#94A3B8">
+                                                        {note.createdAt ? new Date(note.createdAt).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
+                                                    </Typography>
+                                                    {canDelete && (
+                                                        <IconButton size="small" onClick={() => handleDeleteNote(note._id)} sx={{ color: '#94A3B8', '&:hover': { color: '#EF4444' } }}>
+                                                            <DeleteIcon sx={{ fontSize: 14 }} />
+                                                        </IconButton>
+                                                    )}
+                                                </Stack>
+                                            </Box>
+                                            <Box sx={{ px: 2.5, py: 1.8 }}>
+                                                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.7, color: '#374151' }}>{note.content}</Typography>
+                                            </Box>
+                                        </Paper>
+                                    );
+                                })}
+                            </Stack>
+                        )}
+                    </Stack>
+                );
+            })()}
+
+            {/* ── TAB 11: GEÇMİŞ ───────────────────────────────────────────── */}
+            {tab === 11 && (() => {
+                const logs = [...(card.activityLog || [])].reverse();
+                const ACT_COLORS = [
+                    { match: /kanban görevi eklendi/i,   color: '#3B82F6', bg: '#EFF6FF' },
+                    { match: /kanban görevi silindi/i,   color: '#EF4444', bg: '#FEF2F2' },
+                    { match: /revizyon eklendi/i,        color: '#8B5CF6', bg: '#F5F3FF' },
+                    { match: /revizyon silindi/i,        color: '#EF4444', bg: '#FEF2F2' },
+                    { match: /ödeme/i,                   color: '#F59E0B', bg: '#FFFBEB' },
+                    { match: /toplantı/i,                color: '#06B6D4', bg: '#ECFEFF' },
+                    { match: /ilerlemesi/i,              color: '#10B981', bg: '#F0FDF4' },
+                    { match: /paylaşımı eklendi/i,       color: '#EC4899', bg: '#FDF2F8' },
+                    { match: /taşındı|durumu/i,          color: '#F59E0B', bg: '#FFFBEB' },
+                ];
+                const getActStyle = (action) => ACT_COLORS.find(a => a.match.test(action)) || { color: '#64748B', bg: '#F8FAFC' };
+                return (
+                    <Stack spacing={2.5}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                            <Box>
+                                <Typography fontWeight={800} fontSize="1rem" color="#0F172A">Aktivite Geçmişi</Typography>
+                                <Typography variant="caption" color="#94A3B8">{logs.length} kayıt</Typography>
+                            </Box>
+                        </Stack>
+
+                        {logs.length === 0 ? (
+                            <Box textAlign="center" py={6} sx={{ border: '2px dashed #E2E8F0', borderRadius: '16px' }}>
+                                <HistoryIcon sx={{ fontSize: 36, color: '#CBD5E1', mb: 1.5 }} />
+                                <Typography color="#94A3B8" fontWeight={600}>Henüz aktivite kaydı yok</Typography>
+                                <Typography variant="caption" color="#CBD5E1">Kartda değişiklik yapıldığında burada görünecek</Typography>
+                            </Box>
+                        ) : (
+                            <Stack spacing={0}>
+                                {logs.map((log, i) => {
+                                    const style = getActStyle(log.action || '');
+                                    return (
+                                        <Box key={log._id || i} sx={{ display: 'flex', gap: 2, pb: 2 }}>
+                                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+                                                <Box sx={{ width: 32, height: 32, borderRadius: '10px', bgcolor: style.bg, border: `1.5px solid ${style.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <Typography sx={{ fontSize: '0.62rem', fontWeight: 900, color: style.color }}>
+                                                        {(log.userName || '?').charAt(0).toUpperCase()}
+                                                    </Typography>
+                                                </Box>
+                                                {i < logs.length - 1 && <Box sx={{ width: 2, flex: 1, bgcolor: '#F1F5F9', mt: 0.5 }} />}
+                                            </Box>
+                                            <Box sx={{ flex: 1, pb: 0.5 }}>
+                                                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={0.5}>
+                                                    <Box>
+                                                        <Typography variant="body2" fontWeight={600} color="#0F172A" sx={{ lineHeight: 1.3 }}>{log.action}</Typography>
+                                                        <Typography variant="caption" color="#94A3B8">{log.userName}</Typography>
+                                                    </Box>
+                                                    <Typography variant="caption" color="#CBD5E1" sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                                        {log.createdAt ? new Date(log.createdAt).toLocaleString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                                                    </Typography>
+                                                </Stack>
+                                            </Box>
+                                        </Box>
+                                    );
+                                })}
+                            </Stack>
+                        )}
+                    </Stack>
+                );
+            })()}
+
         </Box>
     );
 };

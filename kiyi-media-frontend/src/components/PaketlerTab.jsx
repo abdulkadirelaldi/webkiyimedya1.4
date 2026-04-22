@@ -4,24 +4,17 @@ import axios from 'axios';
 import {
     Box, Typography, Grid, Card, CardContent, Button, IconButton, Stack,
     Dialog, DialogTitle, DialogContent, DialogActions, TextField, Paper,
-    Chip, Switch, FormControlLabel, Tooltip, Divider
+    Chip, Divider
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
-import WebIcon from '@mui/icons-material/Web';
-import BrushIcon from '@mui/icons-material/Brush';
-import MovieIcon from '@mui/icons-material/Movie';
-import AutoStoriesIcon from '@mui/icons-material/AutoStories';
-import GridViewIcon from '@mui/icons-material/GridView';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
-import MenuBookIcon from '@mui/icons-material/MenuBook';
-import QrCode2Icon from '@mui/icons-material/QrCode2';
-import ContactPageIcon from '@mui/icons-material/ContactPage';
-import ArticleIcon from '@mui/icons-material/Article';
-import SignpostIcon from '@mui/icons-material/Signpost';
-import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
+import GridViewIcon from '@mui/icons-material/GridView';
+import AutoStoriesIcon from '@mui/icons-material/AutoStories';
+import MovieIcon from '@mui/icons-material/Movie';
+import MiscellaneousServicesIcon from '@mui/icons-material/MiscellaneousServices';
 
 const API = `${SERVER_URL}/api/packages`;
 
@@ -30,16 +23,7 @@ const authHeader = () => {
     catch { return { Authorization: '' }; }
 };
 
-const empty = { name: '', description: '', posts: 0, stories: 0, reels: 0, websiteIncluded: false, corporateIdentityIncluded: false, katalogIncluded: false, qrMenuIncluded: false, kartvizitIncluded: false, brosurIncluded: false, tabelaIncluded: false, videoIncluded: false, price: 0 };
-
-const EXTRA_SERVICES = [
-    { field: 'katalogIncluded',   label: 'Katalog',      icon: <MenuBookIcon sx={{ fontSize: 18, color: '#8B5CF6' }} />,  color: '#8B5CF6' },
-    { field: 'qrMenuIncluded',    label: 'QR Menü',      icon: <QrCode2Icon  sx={{ fontSize: 18, color: '#06B6D4' }} />,  color: '#06B6D4' },
-    { field: 'kartvizitIncluded', label: 'Kartvizit',    icon: <ContactPageIcon sx={{ fontSize: 18, color: '#3B82F6' }} />, color: '#3B82F6' },
-    { field: 'brosurIncluded',    label: 'Broşür',       icon: <ArticleIcon  sx={{ fontSize: 18, color: '#F97316' }} />,  color: '#F97316' },
-    { field: 'tabelaIncluded',    label: 'Tabela',       icon: <SignpostIcon sx={{ fontSize: 18, color: '#EF4444' }} />,  color: '#EF4444' },
-    { field: 'videoIncluded',     label: 'Video',        icon: <VideoLibraryIcon sx={{ fontSize: 18, color: '#EC4899' }} />, color: '#EC4899' },
-];
+const empty = { name: '', description: '', posts: 0, stories: 0, reels: 0, price: 0, extraServices: [] };
 
 const fmtMoney = n => n ? `₺${Number(n).toLocaleString('tr-TR')}` : '₺0';
 
@@ -48,20 +32,27 @@ const PaketlerTab = ({ setMsg }) => {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [form, setForm] = useState(empty);
     const [editId, setEditId] = useState(null);
+    const [newService, setNewService] = useState('');
 
     const load = async () => {
         try { const r = await axios.get(API); if (r.data.success) setPackages(r.data.data); } catch { }
     };
     useEffect(() => { load(); }, []);
 
-    const openNew = () => { setForm(empty); setEditId(null); setDialogOpen(true); };
-    const openEdit = (pkg) => { setForm({ ...pkg }); setEditId(pkg._id); setDialogOpen(true); };
+    const openNew = () => { setForm(empty); setEditId(null); setNewService(''); setDialogOpen(true); };
+    const openEdit = (pkg) => {
+        setForm({ ...empty, ...pkg, extraServices: pkg.extraServices || [] });
+        setEditId(pkg._id);
+        setNewService('');
+        setDialogOpen(true);
+    };
 
     const handleSave = async () => {
         if (!form.name.trim()) return;
         try {
-            if (editId) await axios.put(`${API}/${editId}`, form, { headers: authHeader() });
-            else await axios.post(API, form, { headers: authHeader() });
+            const payload = { ...form };
+            if (editId) await axios.put(`${API}/${editId}`, payload, { headers: authHeader() });
+            else await axios.post(API, payload, { headers: authHeader() });
             setMsg({ type: 'success', text: editId ? 'Paket güncellendi.' : 'Paket oluşturuldu.' });
             setDialogOpen(false); load();
         } catch (e) { setMsg({ type: 'error', text: e.response?.data?.error || e.message }); }
@@ -74,6 +65,19 @@ const PaketlerTab = ({ setMsg }) => {
     };
 
     const set = (f, v) => setForm(p => ({ ...p, [f]: v }));
+
+    const addService = () => {
+        const trimmed = newService.trim();
+        if (!trimmed) return;
+        const already = (form.extraServices || []).some(s => s.label.toLowerCase() === trimmed.toLowerCase());
+        if (already) return;
+        setForm(p => ({ ...p, extraServices: [...(p.extraServices || []), { label: trimmed }] }));
+        setNewService('');
+    };
+
+    const removeService = (idx) => {
+        setForm(p => ({ ...p, extraServices: p.extraServices.filter((_, i) => i !== idx) }));
+    };
 
     return (
         <Box>
@@ -135,24 +139,17 @@ const PaketlerTab = ({ setMsg }) => {
                                                 <Typography variant="body2" fontWeight={600}>{pkg.reels} Reels</Typography>
                                             </Stack>
                                         )}
-                                        {pkg.websiteIncluded && (
-                                            <Stack direction="row" alignItems="center" spacing={1}>
-                                                <WebIcon sx={{ fontSize: 18, color: '#10B981' }} />
-                                                <Typography variant="body2" fontWeight={600}>Web Sitesi</Typography>
-                                            </Stack>
+                                        {(pkg.extraServices || []).length > 0 && (
+                                            <>
+                                                <Divider sx={{ my: 0.5 }} />
+                                                <Stack direction="row" flexWrap="wrap" gap={0.5}>
+                                                    {pkg.extraServices.map((s, i) => (
+                                                        <Chip key={i} label={s.label} size="small" icon={<MiscellaneousServicesIcon sx={{ fontSize: '14px !important' }} />}
+                                                            sx={{ bgcolor: '#F0FDF4', color: '#10B981', fontWeight: 600, fontSize: '0.72rem' }} />
+                                                    ))}
+                                                </Stack>
+                                            </>
                                         )}
-                                        {pkg.corporateIdentityIncluded && (
-                                            <Stack direction="row" alignItems="center" spacing={1}>
-                                                <BrushIcon sx={{ fontSize: 18, color: '#F59E0B' }} />
-                                                <Typography variant="body2" fontWeight={600}>Kurumsal Kimlik</Typography>
-                                            </Stack>
-                                        )}
-                                        {EXTRA_SERVICES.filter(s => pkg[s.field]).map(s => (
-                                            <Stack key={s.field} direction="row" alignItems="center" spacing={1}>
-                                                {s.icon}
-                                                <Typography variant="body2" fontWeight={600}>{s.label}</Typography>
-                                            </Stack>
-                                        ))}
                                     </Stack>
                                 </CardContent>
                             </Card>
@@ -182,11 +179,34 @@ const PaketlerTab = ({ setMsg }) => {
                             </Grid>
                         </Grid>
                         <Divider><Typography variant="caption" color="text.secondary">Ek Hizmetler</Typography></Divider>
-                        <FormControlLabel control={<Switch checked={!!form.websiteIncluded} onChange={e => set('websiteIncluded', e.target.checked)} />} label="Web Sitesi" />
-                        <FormControlLabel control={<Switch checked={!!form.corporateIdentityIncluded} onChange={e => set('corporateIdentityIncluded', e.target.checked)} />} label="Kurumsal Kimlik" />
-                        {EXTRA_SERVICES.map(s => (
-                            <FormControlLabel key={s.field} control={<Switch checked={!!form[s.field]} onChange={e => set(s.field, e.target.checked)} />} label={s.label} />
-                        ))}
+
+                        {/* Servis ekleme */}
+                        <Stack direction="row" spacing={1}>
+                            <TextField
+                                fullWidth size="small" label="Hizmet adı yaz..." value={newService}
+                                onChange={e => setNewService(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addService(); } }}
+                            />
+                            <Button variant="outlined" onClick={addService} disabled={!newService.trim()}
+                                sx={{ flexShrink: 0, minWidth: 64, borderRadius: 2, fontWeight: 700 }}>
+                                Ekle
+                            </Button>
+                        </Stack>
+
+                        {/* Eklenen servisler */}
+                        {(form.extraServices || []).length > 0 && (
+                            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+                                <Stack direction="row" flexWrap="wrap" gap={0.8}>
+                                    {form.extraServices.map((s, i) => (
+                                        <Chip key={i} label={s.label} size="small"
+                                            onDelete={() => removeService(i)}
+                                            deleteIcon={<CloseIcon sx={{ fontSize: '14px !important' }} />}
+                                            sx={{ bgcolor: '#F0FDF4', color: '#10B981', fontWeight: 600, '& .MuiChip-deleteIcon': { color: '#10B981' } }}
+                                        />
+                                    ))}
+                                </Stack>
+                            </Paper>
+                        )}
                     </Stack>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, py: 2 }}>

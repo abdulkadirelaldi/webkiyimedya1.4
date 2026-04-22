@@ -14,6 +14,7 @@ const PackageSchema = new mongoose.Schema({
     brosurIncluded:             { type: Boolean, default: false },
     tabelaIncluded:             { type: Boolean, default: false },
     videoIncluded:              { type: Boolean, default: false },
+    extraServices: [{ label: { type: String, trim: true } }],
     price:       { type: Number, default: 0 }
 }, { timestamps: true });
 
