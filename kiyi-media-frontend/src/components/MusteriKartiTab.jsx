@@ -507,6 +507,8 @@ const CardDetail = ({ card: initialCard, onBack, onSaved, users, readOnly }) => 
     const [adDialog, setAdDialog] = useState(false);
     const [editingAd, setEditingAd] = useState(null);
     const emptyAd = { name: '', platform: 'Instagram', startDate: '', endDate: '', budget: 0, spent: 0, results: { followers: 0, messages: 0, likes: 0, comments: 0, views: 0, shares: 0, sales: 0, salesAmount: 0 } };
+    const [newSocialForms, setNewSocialForms] = useState({ posts: { sharedAt: '', note: '' }, stories: { sharedAt: '', note: '' }, reels: { sharedAt: '', note: '' } });
+    const [editingSocialEntry, setEditingSocialEntry] = useState(null);
 
     useEffect(() => {
         axios.get(`${SERVER_URL}/api/packages`).then(r => { if (r.data.success) setPackages(r.data.data); }).catch(() => {});
@@ -544,11 +546,30 @@ const CardDetail = ({ card: initialCard, onBack, onSaved, users, readOnly }) => 
     const delContact = (i) => set('contacts', card.contacts.filter((_, idx) => idx !== i));
 
     // social helpers
-    // currentPeriod helpers
     const setPeriodField = (f, v) => { setCard(d => ({ ...d, currentPeriod: { ...d.currentPeriod, [f]: v } })); setDirty(true); };
-    const addSocialEntry = (type) => { const cp = { ...card.currentPeriod }; cp[type] = [...(cp[type] || []), { sharedAt: '', note: '' }]; setPeriodField(type, cp[type]); };
+    const handleAddSocialEntry = (type) => {
+        const form = newSocialForms[type];
+        const cp = { ...card.currentPeriod };
+        cp[type] = [...(cp[type] || []), { sharedAt: form.sharedAt, note: form.note }];
+        setPeriodField(type, cp[type]);
+        setNewSocialForms(p => ({ ...p, [type]: { sharedAt: '', note: '' } }));
+    };
     const upSocialEntry = (type, i, f, v) => { const cp = { ...card.currentPeriod }; const a = [...(cp[type] || [])]; a[i] = { ...a[i], [f]: v }; setPeriodField(type, a); };
-    const delSocialEntry = (type, i) => { const cp = { ...card.currentPeriod }; cp[type] = (cp[type] || []).filter((_, idx) => idx !== i); setPeriodField(type, cp[type]); };
+    const saveEditSocialEntry = () => {
+        if (!editingSocialEntry) return;
+        const { type, idx, data } = editingSocialEntry;
+        const cp = { ...card.currentPeriod };
+        const a = [...(cp[type] || [])];
+        a[idx] = { ...a[idx], sharedAt: data.sharedAt, note: data.note };
+        setPeriodField(type, a);
+        setEditingSocialEntry(null);
+    };
+    const delSocialEntry = (type, i) => { if (!window.confirm('Silinsin mi?')) return; const cp = { ...card.currentPeriod }; cp[type] = (cp[type] || []).filter((_, idx) => idx !== i); setPeriodField(type, cp[type]); };
+    const openRevisionFromSocial = (type, entry) => {
+        const catMap = { posts: 'post', stories: 'story', reels: 'reels' };
+        setEditingRevision({ idx: -1, data: { ...emptyRevision, category: catMap[type] || 'diger', description: entry.note || '', receivedAt: entry.sharedAt ? entry.sharedAt.substring(0, 10) : '' } });
+        setRevisionDialog(true);
+    };
 
     const closePeriod = async () => {
         if (!window.confirm('Mevcut dönem geçmişe taşınsın mı? Sosyal medya verileri sıfırlanacak.')) return;
@@ -1361,11 +1382,12 @@ const CardDetail = ({ card: initialCard, onBack, onSaved, users, readOnly }) => 
                             const entries = cp[key] || [];
                             const done = entries.filter(e => e.sharedAt).length;
                             const pct = quota > 0 ? Math.min(100, Math.round((done / quota) * 100)) : 0;
+                            const nsf = newSocialForms[key];
                             return (
                                 <Paper key={key} sx={{ p: 2.5, borderRadius: '14px', border: `1px solid ${color}30` }}>
                                     <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
                                         <Typography fontWeight={700}>{icon} {label}</Typography>
-                                        {!readOnly && <Button size="small" startIcon={<AddIcon />} onClick={() => addSocialEntry(key)} sx={{ color }}>Paylaşım Ekle</Button>}
+                                        <Typography variant="caption" sx={{ color, fontWeight: 700 }}>{done}{quota > 0 ? ` / ${quota}` : ''} paylaşım</Typography>
                                     </Stack>
 
                                     {quota > 0 && (
@@ -1383,23 +1405,94 @@ const CardDetail = ({ card: initialCard, onBack, onSaved, users, readOnly }) => 
 
                                     <Stack spacing={1}>
                                         {entries.map((item, i) => (
-                                            <Paper key={i} sx={{ p: 1.5, borderRadius: 2, border: `1px solid ${item.sharedAt ? color + '40' : '#E2E8F0'}`, bgcolor: item.sharedAt ? color + '08' : '#fff' }}>
-                                                <Grid container spacing={1.5} alignItems="center">
-                                                    <Grid item xs={12} sm={5}>
-                                                        <TextField fullWidth label="Paylaşım Tarihi" type="date" value={item.sharedAt ? item.sharedAt.substring(0, 10) : ''} onChange={e => upSocialEntry(key, i, 'sharedAt', e.target.value)} size="small" InputLabelProps={{ shrink: true }} disabled={readOnly} />
-                                                    </Grid>
-                                                    <Grid item xs={readOnly ? 12 : 10} sm={readOnly ? 7 : 6}>
-                                                        <TextField fullWidth label="Not" value={item.note || ''} onChange={e => upSocialEntry(key, i, 'note', e.target.value)} size="small" disabled={readOnly} />
-                                                    </Grid>
-                                                    {!readOnly && (
-                                                        <Grid item xs={2} sm={1}>
-                                                            <IconButton size="small" onClick={() => delSocialEntry(key, i)} color="error"><CloseIcon fontSize="small" /></IconButton>
+                                            editingSocialEntry?.type === key && editingSocialEntry?.idx === i ? (
+                                                /* ── Düzenleme satırı ── */
+                                                <Paper key={i} sx={{ p: 1.5, borderRadius: 2, border: `2px solid ${color}60`, bgcolor: color + '06' }}>
+                                                    <Grid container spacing={1.5} alignItems="center">
+                                                        <Grid item xs={12} sm={4}>
+                                                            <TextField fullWidth label="Tarih" type="date" size="small"
+                                                                value={editingSocialEntry.data.sharedAt ? editingSocialEntry.data.sharedAt.substring(0, 10) : ''}
+                                                                onChange={e => setEditingSocialEntry(p => ({ ...p, data: { ...p.data, sharedAt: e.target.value } }))}
+                                                                InputLabelProps={{ shrink: true }} />
                                                         </Grid>
-                                                    )}
+                                                        <Grid item xs={12} sm={6}>
+                                                            <TextField fullWidth label="Not" size="small"
+                                                                value={editingSocialEntry.data.note || ''}
+                                                                onChange={e => setEditingSocialEntry(p => ({ ...p, data: { ...p.data, note: e.target.value } }))} />
+                                                        </Grid>
+                                                        <Grid item xs={12} sm={2}>
+                                                            <Stack direction="row" justifyContent="center">
+                                                                <Tooltip title="Kaydet"><IconButton size="small" onClick={saveEditSocialEntry} sx={{ color }}><CheckCircleIcon fontSize="small" /></IconButton></Tooltip>
+                                                                <Tooltip title="İptal"><IconButton size="small" onClick={() => setEditingSocialEntry(null)}><CloseIcon fontSize="small" /></IconButton></Tooltip>
+                                                            </Stack>
+                                                        </Grid>
+                                                    </Grid>
+                                                </Paper>
+                                            ) : (
+                                                /* ── Görüntü satırı ── */
+                                                <Paper key={i} sx={{ p: 1.5, borderRadius: 2, border: `1px solid ${item.sharedAt ? color + '40' : '#E2E8F0'}`, bgcolor: item.sharedAt ? color + '06' : '#fff' }}>
+                                                    <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
+                                                        <Stack direction="row" spacing={1.5} alignItems="center" flex={1} minWidth={0}>
+                                                            <Typography variant="body2" fontWeight={600} sx={{ color: item.sharedAt ? color : '#94A3B8', whiteSpace: 'nowrap' }}>
+                                                                {item.sharedAt ? fmt(item.sharedAt) : 'Tarih yok'}
+                                                            </Typography>
+                                                            {item.note && (
+                                                                <Typography variant="body2" color="text.secondary" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                    — {item.note}
+                                                                </Typography>
+                                                            )}
+                                                        </Stack>
+                                                        {!readOnly && (
+                                                            <Stack direction="row" spacing={0}>
+                                                                <Tooltip title="Revize Ekle">
+                                                                    <IconButton size="small" onClick={() => openRevisionFromSocial(key, item)} sx={{ color: '#F59E0B' }}>
+                                                                        <BrushIcon fontSize="small" />
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                                <Tooltip title="Düzenle">
+                                                                    <IconButton size="small" onClick={() => setEditingSocialEntry({ type: key, idx: i, data: { ...item } })}>
+                                                                        <EditIcon fontSize="small" color="primary" />
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                                <Tooltip title="Sil">
+                                                                    <IconButton size="small" onClick={() => delSocialEntry(key, i)}>
+                                                                        <DeleteIcon fontSize="small" color="error" />
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                            </Stack>
+                                                        )}
+                                                    </Stack>
+                                                </Paper>
+                                            )
+                                        ))}
+                                        {entries.length === 0 && <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>Bu dönem henüz {label} eklenmedi.</Typography>}
+
+                                        {/* ── Yeni Ekle Formu ── */}
+                                        {!readOnly && (
+                                            <Paper sx={{ p: 1.5, borderRadius: 2, border: `2px dashed ${color}40`, bgcolor: color + '04' }}>
+                                                <Grid container spacing={1.5} alignItems="center">
+                                                    <Grid item xs={12} sm={4}>
+                                                        <TextField fullWidth label="Tarih" type="date" size="small"
+                                                            value={nsf.sharedAt}
+                                                            onChange={e => setNewSocialForms(p => ({ ...p, [key]: { ...p[key], sharedAt: e.target.value } }))}
+                                                            InputLabelProps={{ shrink: true }} />
+                                                    </Grid>
+                                                    <Grid item xs={12} sm={6}>
+                                                        <TextField fullWidth label="Not" size="small"
+                                                            value={nsf.note}
+                                                            onChange={e => setNewSocialForms(p => ({ ...p, [key]: { ...p[key], note: e.target.value } }))}
+                                                            placeholder={`${label} notu...`} />
+                                                    </Grid>
+                                                    <Grid item xs={12} sm={2}>
+                                                        <Button variant="contained" size="small" fullWidth startIcon={<AddIcon />}
+                                                            onClick={() => handleAddSocialEntry(key)}
+                                                            sx={{ bgcolor: color, '&:hover': { bgcolor: color, opacity: 0.88 }, fontWeight: 700 }}>
+                                                            Ekle
+                                                        </Button>
+                                                    </Grid>
                                                 </Grid>
                                             </Paper>
-                                        ))}
-                                        {entries.length === 0 && <Typography variant="body2" color="text.secondary">Bu dönem henüz {label} eklenmedi.</Typography>}
+                                        )}
                                     </Stack>
                                 </Paper>
                             );
